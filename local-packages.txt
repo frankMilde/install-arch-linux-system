@@ -1,0 +1,7 @@
+hub
+pandoc
+qute
+pmount
+mathjax
+powerline-fonts
+smartgithg

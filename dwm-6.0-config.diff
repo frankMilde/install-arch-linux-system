@@ -1,0 +1,190 @@
+diff -rupN old/config.def.h new/config.def.h
+--- old/config.def.h	2014-11-18 18:09:47.000000000 +0100
++++ new/config.def.h	2014-11-18 20:18:50.000000000 +0100
+@@ -2,44 +2,49 @@
+ 
+ /* appearance */
+ static const char font[]            = "-*-terminus-medium-r-*-*-16-*-*-*-*-*-*-*";
+-static const char normbordercolor[] = "#444444";
+-static const char normbgcolor[]     = "#222222";
+-static const char normfgcolor[]     = "#bbbbbb";
+-static const char selbordercolor[]  = "#005577";
+-static const char selbgcolor[]      = "#005577";
+-static const char selfgcolor[]      = "#eeeeee";
+-static const unsigned int borderpx  = 1;        /* border pixel of windows */
++
++static const char normbordercolor[] = "#5f00ff";	// dark violet
++static const char normbgcolor[]     = "#5f00ff"; 	// dark violet 
++static const char normfgcolor[]     = "#949494";	// gray 
++static const char selbordercolor[]  = "#875fff";	// light violet
++static const char selbgcolor[]      = "#875fff";
++static const char selfgcolor[]      = "#ffffff";	// light gray
++
++static const unsigned int borderpx  = 2;        /* border pixel of windows */
+ static const unsigned int snap      = 32;       /* snap pixel */
+ static const Bool showbar           = True;     /* False means no bar */
+ static const Bool topbar            = True;     /* False means bottom bar */
+ 
+ /* tagging */
+-static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
++static const char *tags[] = { "1[screen] ", "2[evince] ", "3[code] ", "4[plot] ", "5", "6", "7[music] ", "8[email] ", "9[interwebs]" };
+ 
+ static const Rule rules[] = {
+ 	/* xprop(1):
+ 	 *	WM_CLASS(STRING) = instance, class
+ 	 *	WM_NAME(STRING) = title
+ 	 */
+-	/* class      instance    title       tags mask     isfloating   monitor */
+-	{ "Gimp",     NULL,       NULL,       0,            True,        -1 },
+-	{ "Firefox",  NULL,       NULL,       1 << 8,       False,       -1 },
++	/* class         instance    title       tags mask     isfloating   monitor */
++	{ "Gimp",        NULL,       NULL,       0,            True,        -1 },
++	{ "Firefox",     NULL,       NULL,       1 << 8,       False,       -1 },
++	{ "Thunderbird", NULL,       NULL,	 1 << 7,       False,       -1 },
++	{ "Evince",	 NULL,       NULL,   	 2,            False,       -1 },
+ };
+ 
+ /* layout(s) */
+-static const float mfact      = 0.55; /* factor of master area size [0.05..0.95] */
++static const float mfact      = 0.60; /* factor of master area size [0.05..0.95] */
+ static const int nmaster      = 1;    /* number of clients in master area */
+ static const Bool resizehints = True; /* True means respect size hints in tiled resizals */
+ 
+ #include "bstack.c"
+ #include "bstackhoriz.c"
++
+ static const Layout layouts[] = {
+ 	/* symbol     arrange function */
+ 	{ "[]=",      tile },    /* first entry is default */
+ 	{ "><>",      NULL },    /* no layout function means floating behavior */
+ 	{ "[M]",      monocle },
+-	{ "TTT",      bstack },
+-	{ "===",      bstackhoriz },
++        { "TTT",      bstack },
++        { "===",      bstackhoriz },
+ };
+ 
+ /* key definitions */
+@@ -55,46 +60,69 @@ static const Layout layouts[] = {
+ 
+ /* commands */
+ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
++static const char *dmenucmd[] = { "dmenu_run", NULL, NULL, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
+ static const char *termcmd[]  = { "st", NULL };
++// as found in https://bbs.archlinux.org/viewtopic.php?id=98757
++static const char *raiseVolumeCmd[]    = { "amixer", "sset", "'Master'", "10%+", NULL };
++static const char *lowerVolumeCmd[]    = { "amixer", "sset", "'Master'", "10%-", NULL };
++static const char *muteVolumeCmd[]     = { "amixer", "sset", "'Master'", "toggle", NULL };
++static const char *shutdownCmd[]       = { "shutdown", "-h", "now", NULL };
++static const char *brightupcmd[]       = { "sudo", "/usr/local/sbin/backlight", "up", NULL };
++static const char *brightdowncmd[]     = { "sudo", "/usr/local/sbin/backlight", "down", NULL };
++static const char *brightresetcmd[]    = { "sudo", "/usr/local/sbin/backlight_reset", NULL };
++static const char *touchpadcmd[]       = { "/usr/local/bin/report_touchpad", NULL };
++static const char *togglecpucmd[]      = { "/usr/local/bin/cpufreq_toggle_osd", NULL };
++static const char *togglewirelesscmd[] = { "sudo", "/usr/local/sbin/rftoggle", NULL };
+ 
+ static Key keys[] = {
+-	/* modifier                     key        function        argument */
+-	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
+-	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
+-	{ MODKEY,                       XK_b,      togglebar,      {0} },
+-	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
+-	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
+-	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
+-	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
+-	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
+-	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
+-	{ MODKEY,                       XK_Return, zoom,           {0} },
+-	{ MODKEY,                       XK_Tab,    view,           {0} },
+-	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
+-	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
+-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+-	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
+-	{ MODKEY,                       XK_space,  setlayout,      {0} },
+-	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
+-	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
+-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
+-	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
+-	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
+-	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
+-	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
+-	TAGKEYS(                        XK_1,                      0)
+-	TAGKEYS(                        XK_2,                      1)
+-	TAGKEYS(                        XK_3,                      2)
+-	TAGKEYS(                        XK_4,                      3)
+-	TAGKEYS(                        XK_5,                      4)
+-	TAGKEYS(                        XK_6,                      5)
+-	TAGKEYS(                        XK_7,                      6)
+-	TAGKEYS(                        XK_8,                      7)
+-	TAGKEYS(                        XK_9,                      8)
+-	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
++  /* modifier                     key        function        argument */
++  { 0,                       0x1008ff11,     spawn,          {.v = lowerVolumeCmd } },
++  { 0,                       0x1008ff13,     spawn,          {.v = raiseVolumeCmd } },
++  { 0,                       0x1008ff12,     spawn,          {.v = muteVolumeCmd } },
++  { 0,                       0x1008ff02,     spawn,          {.v = brightupcmd } },
++  { 0,                       0x1008ff03,     spawn,          {.v = brightdowncmd } },
++  { 0,                       0x1008ff41,     spawn,          {.v = brightresetcmd } },
++  { 0,                       0x1008ffa9,     spawn,          {.v = touchpadcmd } },
++  { 0,                       0x1008ff43,     spawn,          {.v = togglecpucmd } },
++  { 0,                       0x1008ff95,     spawn,          {.v = togglewirelesscmd } },
++  { MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
++  { MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
++  { MODKEY,                       XK_b,      togglebar,      {0} },
++  { MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
++  { MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
++  { MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
++  { MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
++  { MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
++  { MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
++  { MODKEY,                       XK_Return, zoom,           {0} },
++  { MODKEY,                       XK_Tab,    view,           {0} },
++  { MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
++  { MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
++  { MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
++  { MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
++  { MODKEY,                       XK_b,      setlayout,      {.v = &layouts[3]} },
++  { MODKEY,                       XK_space,  setlayout,      {0} },
++  { MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
++  { MODKEY,                       XK_0,      view,           {.ui = ~0 } },
++  { MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
++  { MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
++  { MODKEY,                       XK_period, focusmon,       {.i = +1 } },
++  { MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
++  { MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
++  TAGKEYS(                        XK_1,                      0)
++  TAGKEYS(                        XK_2,                      1)
++  TAGKEYS(                        XK_3,                      2)
++  TAGKEYS(                        XK_4,                      3)
++  TAGKEYS(                        XK_5,                      4)
++  TAGKEYS(                        XK_6,                      5)
++  TAGKEYS(                        XK_7,                      6)
++  TAGKEYS(                        XK_8,                      7)
++  TAGKEYS(                        XK_9,                      8)
++  { MODKEY|ShiftMask,             XK_q,      quit,           {0} },
++  { MODKEY|ShiftMask,             XK_x,      spawn,          {.v = shutdownCmd } },
+ };
+ 
++
+ /* button definitions */
+ /* click can be ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
+ static Button buttons[] = {
+diff -rupN old/config.mk new/config.mk
+--- old/config.mk	2014-11-18 18:09:45.000000000 +0100
++++ new/config.mk	2014-11-18 21:03:03.062431352 +0100
+@@ -4,11 +4,11 @@ VERSION = 6.1
+ # Customize below to fit your system
+ 
+ # paths
+-PREFIX = /usr/local
++PREFIX = ${HOME}/local
+ MANPREFIX = ${PREFIX}/share/man
+ 
+-X11INC = /usr/X11R6/include
+-X11LIB = /usr/X11R6/lib
++X11INC = /usr/include/X11
++X11LIB = /usr/lib/X11
+ 
+ # Xinerama, comment if you don't want it
+ XINERAMALIBS  = -lXinerama
