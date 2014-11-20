@@ -35,7 +35,7 @@ You are welcomed by a promt as root.
 grep -o -w 'lm' /proc/cpuinfo | sort -u
 ```
 if this gives you `lm` as output your machine is 64 bit. Now you know, which
-arch iso to use.
+arch type to use at boot (the iso always contains both versions).
 
 Prepare the hard drive
 ----------------------
@@ -68,7 +68,7 @@ Device     Boot Start       End   Sectors   Size Id Type
 This tells us that `/dev/sda/` is the hard drive and `/dev/sdb/` is the
 thumb drive.
 
-### Clear existing harddrive partions
+### Clear existing harddrive partitions
 ```
 $ sgdisk --zap-all /dev/sda
 ```
@@ -85,19 +85,19 @@ contain encrypted data.
 
 When preparing a drive for full-disk encryption, sourcing high quality
 entropy is usually not necessary. The alternative is to use an encrypted
-datastream. For example, if you will use ÄS for your encrypted partition,
+datastream. For example, if you will use `AES` for your encrypted partition,
 you would wipe it with an equivalent encryption cipher prior to creating the
 filesystem to make the empty space not distinguishable from the used space. 
 ```
-# df -B1 /dev/sdd3
-#>  Filesystem        1B-blocks         Used   Available Use% Mounted on
-#>  /dev/sdd3      488185536512 382407708672 80955781120  83% /home
+$ df -B1 /dev/sdd3
+>  Filesystem        1B-blocks         Used   Available Use% Mounted on
+>  /dev/sdd3      488185536512 382407708672 80955781120  83% /home
 
-DISK_SIZE=$(df -B1 /dev/<drive> | tail -n1 | tr -s ' ' | cut -d' ' -f2)
-PHYS_BLOCK_SIZE=$(cat /sys/block/<drive>/queue/physical_block_size)
-NUM_BLOCKS=$((DISK_SIZE / PHYS_BLOCK_SIZE))
+$ DISK_SIZE=$(df -B1 /dev/<drive> | tail -n1 | tr -s ' ' | cut -d' ' -f2)
+$ PHYS_BLOCK_SIZE=$(cat /sys/block/<drive>/queue/physical_block_size)
+$ NUM_BLOCKS=$((DISK_SIZE / PHYS_BLOCK_SIZE))
 
-# openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero \
+$ openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero \
     | pv -bartpes $DISK_SIZE | dd bs=$PHYS_BLOCK_SIZE count=$NUM_BLOCKS of=/dev/<drive>
 ```
 The above command creates a 128 byte encryption key seeded from
@@ -106,26 +106,26 @@ output with the `urandom` key. Utilizing the cipher instead of a
 pseudorandom source results in very high write speeds and the result is a
 device filled with AES ciphertext. 
 
-### Create new harddrive partions
+### Create new harddrive partitions
 
 To achieve our setup we need two partitions, one for `/boot` as it cannot be
 encrypted, and second one that will host the encrypted `LUKS` partition under
 which the LVMs run. This setup is called **LVM on LUKS** as first everything
 is encrypted and then under the encryption the logical volumes created.
 We use [fdisk](http://tldp.org/HOWTO/Partition/fdisk_partitioning.html)
-([more](https://wiki.archlinux.org/index.php/Beginners%27_guide/Preparation#Using_fdisk_to_create_MBR_partitions))
+([more info on fdisk usage](https://wiki.archlinux.org/index.php/Beginners%27_guide/Preparation#Using_fdisk_to_create_MBR_partitions))
 as our tool of choice:
 ```
 $ fdisk /dev/hdb
 ```
 #### First we create a `256MB` Boot partition.
 ```
-Command (m for help): **n**
+Command (m for help): <b>n<\b>
 Command action
    e   extended
    p   primary partition (1-4)
-**p**
-Partition number (1-4): **1**
+<b>p</b>
+Partition number (1-4): <b>1</b>
 First sector (2048-209715199, default 2048):<RETURN>
 Using default value 1
 Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199):: +256M
@@ -137,23 +137,27 @@ Partition number (1-4): 1
 ```
 #### Second the rest of the hard drive is use for the encrypted system.
 ```
-Command (m for help): **n**
+Command (m for help): <b>n</b>
 Command action
    e   extended
    p   primary partition (1-4)
-**p**
-Partition number (1-4): **2**
+<b>p</b>
+Partition number (1-4): <b>2</b>
 First sector (52488-209715199, default 52488):<RETURN>
 Using default value 1
 Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199)::<RETURN>
 ```
 Make this partition an LVM
 ```
-Command (m for help): t
-Partition number (1-4): 2
-Hex code (type L to list codes): 8e
+Command (m for help): <b>t</b>
+Partition number (1-4): <b>2</b>
+Hex code (type L to list codes): <b>8e</b>
 Changed system type of partition 2 to 8e (Linux LVM)      
-Command (m for help): p
+Command (m for help): <b>p</b>
+```
+Create partition by writing partition table
+```
+Command (m for help):<b>w</b>
 ```
 
 Encrypt all the things
@@ -181,7 +185,7 @@ PBKDF2-whirlpool  161022 iterations per second
  serpent-xts   256b   206.2 MiB/s   211.1 MiB/s
  twofish-xts   256b   181.3 MiB/s   187.5 MiB/s
      aes-xts   512b   132.3 MiB/s   131.6 MiB/s
-** serpent-xts   512b   206.9 MiB/s   214.7 MiB/s**
+<b> serpent-xts   512b   206.9 MiB/s   214.7 MiB/s</b>
  twofish-xts   512b   186.6 MiB/s   188.4 MiB/s
 ```
 We want the best possible security so we choose to use the following
