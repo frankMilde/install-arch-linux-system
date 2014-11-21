@@ -26,7 +26,7 @@
 
 #!/bin/bash
 
-# Enforce Bash strict mode, see
+# Enforce Bash strict mode, see {{{
 # 'http://redsymbol.net/articles/unofficial-bash-strict-mode/' 
 set -e 					# exit if any command [1] has a non-zero exit status
 set -u 					# a reference to any variable you havent previously defined
@@ -34,13 +34,11 @@ set -u 					# a reference to any variable you havent previously defined
 set -o pipefail # prevents errors in a pipeline from being masked.
 set -o nounset  # Treat unset variables as an error
 IFS=$'\n\t'     # meaning full Internal Field Separator - controls what Bash calls word
-								# splitting
+								# splitting }}}
 
 #---------------------------------------------------------------------------
-# GLOBALS
+# USER INTERFACE
 #---------------------------------------------------------------------------
-CMDLINE_ARGS=${1:-}
-
 readonly SL_SOFTWARE=(
 "dwm"
 "dmenu"
@@ -54,6 +52,12 @@ readonly DWM_PATCHES=(
 "attachaside"
 # add further patches here
 )
+
+#---------------------------------------------------------------------------
+# GLOBALS
+#---------------------------------------------------------------------------
+CMDLINE_ARGS=${1:-}
+
 #---------------------------------------------------------------------------
 # FUNCTIONS
 #---------------------------------------------------------------------------
@@ -64,7 +68,7 @@ function greeting () {
 ------------------------------------------------
 ---  Installing essential suckless software  ---
 ------------------------------------------------
-    $(tput sgr0)"
+           $(tput sgr0)"
   echo 
 }    # ----------  end of function greeting  ----------
 function display_software () {
@@ -121,8 +125,8 @@ function apply_dwm_patches () {
 
 	echo -e "$(tput setaf 3) Apply dwm-6.0-config.diff $(tput sgr0)"
 
-	cp ${HOME}/github/installer/dwm-6.0-config.diff .
-	patch < dwm-6.0-config.diff
+	cp ${HOME}/github/install-arch-linux-system/dwm-6.0-config.diff .
+	patch -p1 < dwm-6.0-config.diff
 }  # -----  end of function apply_dwm_patches  -----
 
 #---  FUNCTION  ------------------------------------------------------------
@@ -162,9 +166,11 @@ function apply_suckless_patches () {
 	echo -e "$(tput setaf 3)Apply config patches.$(tput sgr0)"
 
 	cd ${HOME}/local/src/
-	cp ${HOME}/github/installer/suckless.diff .
+	cp ${HOME}/github/install-arch-linux-system/suckless.diff .
 
+	#set +e # allow non-zero return values
 	patch -p1 < suckless.diff
+	#set -e
 }  # -----  end of function apply_suckless_patches  -----
 function install_software () {
 	cd ${HOME}/local/src/
@@ -198,7 +204,7 @@ function main() {
 	display_software
 
 	local choice=""
-	read -e -p "Install all add-ons y/n? (y) " choice
+	read -e -p "Install all software y/n? (default is y) " choice
 	choice=${choice:-y}
 
 	if [[ ${choice} == y ]]
@@ -208,6 +214,13 @@ function main() {
 		apply_dwm_patches
 		apply_suckless_patches
 		install_software
+	else
+		echo "
+$(tput setaf 3)
+Then modify $(tput bold)$(basename ${0}) $(tput sgr0)$(tput setaf 3 )in the USERINTERFACE section in 
+the begining of the file and comment out the software or dwm patches you
+would not like to have installed.
+$(tput sgr0)"
 	fi
 
 	echo
