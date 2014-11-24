@@ -181,6 +181,7 @@ function install_software () {
 		make clean install
 		cd ..
 	done  # -----  end of for  -----
+	echo
 }  # -----  end of function install_software  -----
 
 #===  FUNCTION  ============================================================

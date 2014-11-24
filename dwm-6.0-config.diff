@@ -70,7 +70,7 @@ diff -rupN old/config.def.h new/config.def.h
  /* commands */
  static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 -static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
-+static const char *dmenucmd[] = { "dmenu_run", NULL, NULL, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
++static const char *dmenucmd[] = { "dmenu_run", "-fn", font, NULL };
  static const char *termcmd[]  = { "st", NULL };
 +// as found in https://bbs.archlinux.org/viewtopic.php?id=98757
 +static const char *raiseVolumeCmd[]    = { "amixer", "sset", "'Master'", "10%+", NULL };

@@ -23,6 +23,9 @@ For my laptop I want to achieve the following setup:
 |                           /dev/sdaX                                      | | /dev/sdbY      |
 +--------------------------------------------------------------------------+ +----------------+
 ```
+This is needed to have an encrypted disk, while still being able to go into
+suspension mode on the laptop (hence the swap volume).
+
 Get Arch
 --------
 Get latest Arch distro.
@@ -72,6 +75,8 @@ thumb drive.
 ```
 $ sgdisk --zap-all /dev/sda
 ```
+Don't get discouraged by the message `Found invalid GPT and valid MBR;
+converting MBR to GPT format in memory`. Its all good.
 
 ### Securely wipe all data from disk
 Before setting up disk encryption on a disk, [wipe it securely
@@ -89,22 +94,16 @@ datastream. For example, if you will use `AES` for your encrypted partition,
 you would wipe it with an equivalent encryption cipher prior to creating the
 filesystem to make the empty space not distinguishable from the used space. 
 ```
-$ df -B1 /dev/sdd3
->  Filesystem        1B-blocks         Used   Available Use% Mounted on
->  /dev/sdd3      488185536512 382407708672 80955781120  83% /home
-
-$ DISK_SIZE=$(df -B1 /dev/<drive> | tail -n1 | tr -s ' ' | cut -d' ' -f2)
-$ PHYS_BLOCK_SIZE=$(cat /sys/block/<drive>/queue/physical_block_size)
-$ NUM_BLOCKS=$((DISK_SIZE / PHYS_BLOCK_SIZE))
-
 $ openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero \
-    | pv -bartpes $DISK_SIZE | dd bs=$PHYS_BLOCK_SIZE count=$NUM_BLOCKS of=/dev/<drive>
+> /dev/<yourdrive>
 ```
 The above command creates a 128 byte encryption key seeded from
 `/dev/urandom`.  `AES-256` in `CTR mode` is used to encrypt `/dev/zero`'s
-output with the `urandom` key. Utilizing the cipher instead of a
-pseudorandom source results in very high write speeds and the result is a
-device filled with AES ciphertext. 
+output with the `urandom` key and writing it to `/dev/sda` for example..
+Utilizing the cipher instead of a pseudorandom source results in very high
+write speeds and the result is a device filled with AES ciphertext. However,
+depending on CPU power and disk size this task can still take a few hours
+time.
 
 ### Create new harddrive partitions
 
@@ -116,8 +115,9 @@ We use [fdisk](http://tldp.org/HOWTO/Partition/fdisk_partitioning.html)
 ([more info on fdisk usage](https://wiki.archlinux.org/index.php/Beginners%27_guide/Preparation#Using_fdisk_to_create_MBR_partitions))
 as our tool of choice:
 ```
-$ fdisk /dev/hdb
+$ fdisk /dev/sda
 ```
+
 #### First we create a `256MB` Boot partition.
 ```
 Command (m for help): <b>n<\b>
@@ -128,7 +128,7 @@ Command action
 Partition number (1-4): <b>1</b>
 First sector (2048-209715199, default 2048):<RETURN>
 Using default value 1
-Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199):: +256M
+Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199): +256M
 ```
 Make this partition bootable
 ```
@@ -145,7 +145,7 @@ Command action
 Partition number (1-4): <b>2</b>
 First sector (52488-209715199, default 52488):<RETURN>
 Using default value 1
-Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199)::<RETURN>
+Last sector, +sectors or +size{K,M,G,T,P} (31459328-209715199....., default 209715199):<RETURN>
 ```
 Make this partition an LVM
 ```
@@ -189,8 +189,271 @@ PBKDF2-whirlpool  161022 iterations per second
  twofish-xts   512b   186.6 MiB/s   188.4 MiB/s
 ```
 We want the best possible security so we choose to use the following
-[options](https://wiki.archlinux.org/index.php/Dm-crypt/Device_encryption#Encryption
-options for LUKS mode).
+[options](https://wiki.archlinux.org/index.php/Dm-crypt/Device_encryption#Encryption_options_for_LUKS_mode).
 ```
 cryptsetup -v --cipher serpent-xts-plain64 --key-size 512 --hash sha512 --iter-time 5000 --use-random luksFormat /dev/sda2
+```
+Open the container: 
+```
+cryptsetup open --type luks /dev/sda2 lvm
+```
+The decrypted container is now available at `/dev/mapper/lvm`.
+
+### [Preparing the logical
+volumes](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system#Preparing_the_ogical_volumes)
+
+Create a physical volume on top of the opened LUKS container: 
+```
+pvcreate /dev/mapper/lvm
+```
+Create the volume group named MyStorage, adding the previously created
+physical volume to it:
+```
+ vgcreate MyStorage /dev/mapper/lvm
+```
+Create all your logical volumes on the volume group:
+```
+lvcreate -L 8G MyStorage -n swapvol
+lvcreate -l +100%FREE MyStorage -n rootvol
+```
+
+Format your filesystems on each logical volume:
+
+```
+mkfs.ext4 /dev/mapper/MyStorage-rootvol
+mkswap /dev/mapper/MyStorage-swapvol
+```
+Mount your filesystems:
+
+```
+mount /dev/MyStorage/rootvol /mnt
+swapon /dev/MyStorage/swapvol
+```
+
+### Preparing the boot partition
+
+The bootloader loads the kernel, `initramfs`, and its own configuration files from the `/boot` directory. This directory must be located on a separate unencrypted filesystem.
+
+Create an `ext2` filesystem on the partition intended for `/boot`. Any filesystem that can be read by the bootloader is eligible.
+```
+ mkfs.ext2 /dev/sdbY
+```
+Create the directory /mnt/boot:
+```
+ mkdir /mnt/boot
+```
+Mount the partition to /mnt/boot:
+```
+ mount /dev/sdbY /mnt/boot
+```
+
+## Installing the base system
+
+### Get internet
+Check if the connection is up:
+```
+ping -c 3 www.google.com
+```
+```
+PING www.l.google.com (74.125.132.105) 56(84) bytes of data.
+64 bytes from wb-in-f105.1e100.net (74.125.132.105): icmp_req=1 ttl=50
+time=17.0 ms
+64 bytes from wb-in-f105.1e100.net (74.125.132.105): icmp_req=2 ttl=50
+time=18.2 ms
+64 bytes from wb-in-f105.1e100.net (74.125.132.105): icmp_req=3 ttl=50
+time=16.6 ms
+
+--- www.l.google.com ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 16.660/17.320/18.254/0.678 ms
+```
+If not try 
+```
+systemctl stop dhcpcd.service
+```
+```
+systemctl start dhcpcd.service
+```
+I used a wired connection here, but you can setup [wireless easily](https://wiki.archlinux.org/index.php/Beginners%27_guide#Wireless), too.
+
+
+### Install 
+
+The base system is installed using the `pacstrap` script. The `-i` switch can be
+omitted if you wish to install every package from the base group without
+prompting. You may also want to include `base-devel`, as you will need these
+packages should you want to build packages from the AUR or using the ABS:
+```
+pacstrap -i /mnt base base-devel
+```
+
+### Configure system
+
+Lets jump into our new system and do some configuration. `Chroot` is a tool
+that allows us to change our root system and make changes as if we were
+actually running the other device. This is a wonderful tool if you ever break
+your system and need to get back in.
+```
+# arch-chroot /mnt /bin/bash
+```
+
+#### Locales
+
+Locales are used by `glibc` and other locale-aware programs or libraries for
+rendering text, correctly displaying regional monetary values, time and date
+formats, alphabetic idiosyncrasies, and other locale-specific standards.
+
+Edit appropriately for your language.
+
+```
+vi /etc/locale.gen
+```
+Uncomment this line if you want to use English. Only use UTF-8 options.
+```
+en_US.UTF-8 UTF-8
+```
+Generate your locale.
+
+```
+locale-gen
+```
+Set the locale environment variables.
+
+```
+echo LANG=en_US.UTF-8 > /etc/locale.conf
+export LANG=en_US.UTF-8
+```
+
+#### Console fonts
+
+Lets set our keymaps and fonts. The default keymap is "us", only needs to be
+adjusted if “us” does not apply to you. I love Terminus for its legibility as a
+mono-spaced font. I will be setting the environment variable here.
+```
+setfont Lat2-Terminus16
+```
+Create and edit `/etc/vconsole.conf` and add your preferred font.
+```
+# vi /etc/vconsole.conf
+```
+I will be adding this line.
+```
+FONT=Lat2-Terminus16
+```
+
+#### Time zones
+
+Find where you are in the world; drill down until you find the location closest to you.
+```
+# ls /usr/share/zoneinfo/
+```
+Link your timezone to `localtime`
+```
+# ln -s /usr/share/zoneinfo/US/Pacific /etc/localtime
+```
+
+#### Hardware Clock
+
+We want our clock to stay synced up with the rest of the world. It is
+especially important you have an accurate clock if you use an authentication
+system such as Kerberos. We are eventually going to use ntp for this, but for
+now UTC time will be just fine. I noticed that systemd wont let you start the
+daemon while we are chrooted so this will have to be done later.
+```
+hwclock -w -u
+```
+
+#### Hostname
+```
+# echo vesuvius > /etc/hostname
+```
+
+### Wireless
+```
+pacman -S wireless_tools wpa_supplicant wpa_actiond dialog iw
+```
+
+### Recreate initial ramdisk
+Setting mkinit hooks
+```
+vi /etc/mkinitcpio.conf
+```
+where the MODULES- und HOOKS-values  are configured:
+```
+MODULES="ext4"
+HOOKS="base udev autodetect block keyboard keymap encrypt lvm2 resume
+filesystems fsck shutdown"
+```
+uncomment the line
+```
+COMPRESSION="xz"
+```
+Then save and update
+```
+mkinitcpio -p linux
+```
+
+### Bootloader
+Install
+```
+# pacman -S syslinux
+# syslinux-install_update -iam
+```
+Configure
+```
+vi /boot/syslinux/syslinux.cfg
+
+...
+LABEL arch
+        ...
+        APPEND root=/dev/sda2 rw
+				APPEND resume=/dev/MyStorage/swap
+				APPEND cryptdevice=/dev/sda2:MyStorage Mystorage=/dev/mapper/root
+```
+				resume=/dev/MyStorage/swap
+				cryptdevice=/dev/sda2:MyStorage
+
+### Password
+
+Set your root password. This should be a at least 8 mixed characters. If you don’t know what makes a good password, read through this wiki for a primer:http://en.wikipedia.org/wiki/Password_policy
+
+```
+passwd
+```
+
+### User and groups
+
+We don’t use root for anything but system maintenance, so we need a daily user. It helps to know what the user is going to be used for so you can assign it to the relevant groups. A good admin needs to have an understanding of user and group concepts, I encourage you to read up on it: https://wiki.archlinux.org/index.php/Users_and_Groups
+```
+# useradd -m -g users -G audio,disk,storage,video,wheel -s /bin/bash tony
+# passwd tony
+```
+Since we added our user to the group ‘wheel’ we also need the sudo package. Sudo makes administration much easier so lets pull it in.
+
+```
+# pacman -S sudo
+```
+
+use visudo
+
+```
+visudo
+```
+and uncomment the appropriate line to allow members of wheel to act as root
+```
+%wheel ALL=(ALL) ALL
+```
+
+This functionality can also be obtained by adding a user to visudo. Wheel is nice however, as we may have more admins someday.
+
+### Umount and reboot
+
+The step you’ve been waiting for, let’s get out of chroot, unmount and
+reboot!
+
+```
+exit
+umount /mnt/home
+umount /mnt/
+reboot
 ```
