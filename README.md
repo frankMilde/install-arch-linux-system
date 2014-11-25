@@ -236,7 +236,7 @@ The bootloader loads the kernel, `initramfs`, and its own configuration files fr
 
 Create an `ext2` filesystem on the partition intended for `/boot`. Any filesystem that can be read by the bootloader is eligible.
 ```
- mkfs.ext2 /dev/sdbY
+ mkfs.ext2 /dev/sda1
 ```
 Create the directory `/mnt/boot`:
 ```
@@ -244,7 +244,7 @@ Create the directory `/mnt/boot`:
 ```
 Mount the partition to `/mnt/boot`:
 ```
- mount /dev/sdbY /mnt/boot
+ mount /dev/sda1 /mnt/boot
 ```
 
 ## Installing the base system
@@ -276,7 +276,7 @@ systemctl start dhcpcd.service
 ```
 I used a wired connection here, but you can setup [wireless easily](https://wiki.archlinux.org/index.php/Beginners%27_guide#Wireless), too.
 Make sure to have the [wifi switch of your laptop turned
-on](http://forums.lenovo.com/t5/T400-T500-and-newer-T-series/t420s-Wireless-Connection-problem/td-p/752183)
+on](http://forums.lenovo.com/t5/T400-T500-and-newer-T-series/t420s-Wireless-Connection-problem/td-p/752183) (face palm).
 
 
 ### Install 
@@ -609,6 +609,13 @@ Now reboot and see if `dwm` is coming up nicely.
 ```
 Then open `vim` and type `:NeoBundleInstall`
 
+### Power management 
+TODO:
 
-
+http://forums.linuxmint.com/viewtopic.php?f=49&t=160379
+https://wiki.archlinux.org/index.php/Power_management
+https://wiki.archlinux.org/index.php/General_recommendations#Power_management
+https://wiki.archlinux.org/index.php/Laptop#Power_management
+https://wiki.archlinux.org/index.php/Hdparm#Power_management_configuration
+https://wiki.archlinux.org/index.php/Power_saving
 
