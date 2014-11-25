@@ -199,8 +199,7 @@ cryptsetup open --type luks /dev/sda2 lvm
 ```
 The decrypted container is now available at `/dev/mapper/lvm`.
 
-### [Preparing the logical
-volumes](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system#Preparing_the_ogical_volumes)
+### Preparing the logical volumes
 
 Create a physical volume on top of the opened LUKS container: 
 ```
@@ -229,6 +228,7 @@ Mount your filesystems:
 mount /dev/MyStorage/rootvol /mnt
 swapon /dev/MyStorage/swapvol
 ```
+For more info, see [here](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system#Preparing_the_ogical_volumes).
 
 ### Preparing the boot partition
 
@@ -238,11 +238,11 @@ Create an `ext2` filesystem on the partition intended for `/boot`. Any filesyste
 ```
  mkfs.ext2 /dev/sdbY
 ```
-Create the directory /mnt/boot:
+Create the directory `/mnt/boot`:
 ```
  mkdir /mnt/boot
 ```
-Mount the partition to /mnt/boot:
+Mount the partition to `/mnt/boot`:
 ```
  mount /dev/sdbY /mnt/boot
 ```
@@ -275,6 +275,8 @@ systemctl stop dhcpcd.service
 systemctl start dhcpcd.service
 ```
 I used a wired connection here, but you can setup [wireless easily](https://wiki.archlinux.org/index.php/Beginners%27_guide#Wireless), too.
+Make sure to have the [wifi switch of your laptop turned
+on](http://forums.lenovo.com/t5/T400-T500-and-newer-T-series/t420s-Wireless-Connection-problem/td-p/752183)
 
 
 ### Install 
@@ -392,6 +394,10 @@ Then save and update
 ```
 mkinitcpio -p linux
 ```
+For more see
+[here](https://wiki.archlinux.org/index.php/Suspend_and_hibernate#Required_kernel_parameters)
+and
+[here](https://wiki.archlinux.org/index.php/Dm-crypt/Swap_encryption#With_suspend-to-disk_support)
 
 ### Bootloader
 Install
@@ -405,30 +411,53 @@ vi /boot/syslinux/syslinux.cfg
 
 ...
 LABEL arch
-        ...
-        APPEND root=/dev/sda2 rw
-				APPEND resume=/dev/MyStorage/swap
-				APPEND cryptdevice=/dev/sda2:MyStorage Mystorage=/dev/mapper/root
+    MENU LABEL Arch Linux
+    LINUX ../vmlinuz-linux
+		APPEND cryptdevice=/dev/sda2:MyStorage root=/dev/mapper/MyStorage-rootvol rw resume=/dev/mapper/MyStorage-swapvol
+    INITRD ../initramfs-linux-fallback.img
 ```
-				resume=/dev/MyStorage/swap
-				cryptdevice=/dev/sda2:MyStorage
+Now get the persistent partition UUID from
+```
+lsblk -f
 
-### Password
+NAME                         FSTYPE      LABEL  UUID                                 MOUNTPOINT
+sda                                                                             
+├─sda1                       ext2               CBB6-24F2                            /boot
+├─sda2                       crypto_LUKS        0a3407de-014b-458b-b5c1-848e92a327a3 
+		└─MyStorage ...
+		    └─MyStorage-swapvol ....
+		    └─MyStorage-rootvol ....
+```
+and change the name of the volume `cryptdevice=/dev/sda2:MyStorage` to the
+persistent UUID 
+```
+cryptdevice=UUID="0a3407de-014b-458b-b5c1-848e92a327a3":MyStorage root=/dev/mapper/MyStorage-rootvol rw resume=/dev/mapper/MyStorage-swapvol
+```
+This is recommended. If your machine has more than one SATA, SCSI or IDE
+disk controller, the order in which their corresponding device nodes are
+added is arbitrary. This may result in device names like /dev/sda and
+/dev/sdb switching around on each boot, culminating in an unbootable system,
+kernel panic, or a block device disappearing. [Persistent naming solves these
+issues.](https://wiki.archlinux.org/index.php/Persistent_block_device_naming)
 
-Set your root password. This should be a at least 8 mixed characters. If you don’t know what makes a good password, read through this wiki for a primer:http://en.wikipedia.org/wiki/Password_policy
-
+### Set root password
 ```
 passwd
 ```
 
 ### User and groups
 
-We don’t use root for anything but system maintenance, so we need a daily user. It helps to know what the user is going to be used for so you can assign it to the relevant groups. A good admin needs to have an understanding of user and group concepts, I encourage you to read up on it: https://wiki.archlinux.org/index.php/Users_and_Groups
+We don’t use root for anything but system maintenance, so we need a daily
+user. It helps to know what the user is going to be used for so you can
+assign it to the relevant groups. A good admin needs to have an
+understanding of user and group concepts, I encourage you to [read up on
+it](https://wiki.archlinux.org/index.php/Users_and_Groups)
 ```
 # useradd -m -g users -G audio,disk,storage,video,wheel -s /bin/bash tony
 # passwd tony
 ```
-Since we added our user to the group ‘wheel’ we also need the sudo package. Sudo makes administration much easier so lets pull it in.
+Since we added our user to the group ‘wheel’ we also need the `sudo`
+package. Sudo makes administration much easier so lets pull it in.
 
 ```
 # pacman -S sudo
@@ -444,7 +473,24 @@ and uncomment the appropriate line to allow members of wheel to act as root
 %wheel ALL=(ALL) ALL
 ```
 
-This functionality can also be obtained by adding a user to visudo. Wheel is nice however, as we may have more admins someday.
+This functionality can also be obtained by adding a user to `visudo`. Wheel is
+nice however, as we may have more admins someday.
+
+### Set up wireless
+Run
+```
+wifi-menu
+```
+get your wireless interface name
+```
+ip link
+```
+Your wireless will typically be something like `wlp3s0`.
+Enable the `netctl-auto` service, which will connect to known networks and
+gracefully handle roaming and disconnects:
+```
+# systemctl enable netctl-auto@interface_name.service
+```
 
 ### Umount and reboot
 
@@ -457,3 +503,112 @@ umount /mnt/home
 umount /mnt/
 reboot
 ```
+
+First Light
+-----------
+Now after the reboot login in with your normal user name and become
+superuser.  
+```
+su
+```
+
+### Set up package manager
+```
+vi /etc/pacman.conf
+```
+
+If you're on a 64-bit machine, you should enable the `[multilib]` repository,
+which lets you install both 64- and 32-bit programs. To do so, add the
+following lines to the bottom of the config file:
+
+```
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+```
+Otherwise leave it as is. Now update pacman
+```
+pacman -Sy
+```
+
+### Network Time Protocol
+
+Arch synced up with a time-server so we don’t have to worry about clock
+skew, which can really mess with certain pieces of software.
+```
+pacman -S ntp
+```
+Edit `/etc/ntp.conf` with your NTP servers. You can find a server near you
+here: http://www.pool.ntp.org/zone 
+```
+vi /etc/ntp.conf
+```
+change to
+
+```
+server 0.us.pool.ntp.org iburst
+server 1.us.pool.ntp.org iburst
+server 2.us.pool.ntp.org iburst
+server 3.us.pool.ntp.org iburst
+```
+or
+```
+server 0.de.pool.ntp.org
+server 1.de.pool.ntp.org
+server 2.de.pool.ntp.org
+server 3.de.pool.ntp.org
+```
+what ever is closest to you.
+
+Start ntpd
+
+```
+# systemctl start ntpd
+```
+
+Enable ntpd to start at boot
+
+```
+# systemctl enable ntpd
+```
+
+Typing `date` at this point should show the correct date and time.
+
+### Git
+```
+pacman -S git
+```
+
+Customize your arch
+-------------------
+First, become a normal user again.
+Pull in 
+```
+mkdir github
+cd github/
+git clone https://github.com/frankMilde/install-arch-linux-system.git
+cd install-arch-linux-system
+./install-arch-packages.sh
+./install-suckless-software.sh
+cd
+git clone https://github.com/frankMilde/dot-files.git
+cd dot-files/
+stow stow
+stow bash
+stow fonts
+stow mc
+stow vim
+stow x
+```
+maybe you have to delete `.bashrc` and `bash_profile` first.
+
+Now reboot and see if `dwm` is coming up nicely.
+
+### Customize vim 
+```
+ curl https://raw.githubusercontent.com/Shougo/neobundle.vim/master/bin/install.sh | sh
+```
+Then open `vim` and type `:NeoBundleInstall`
+
+
+
+
