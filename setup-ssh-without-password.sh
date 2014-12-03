@@ -42,7 +42,7 @@
 #---------------------------------------------------------------------------
 #   globals
 #---------------------------------------------------------------------------
-readonly KEY="id_rsa"
+readonly KEY="remotessh_rsa"
 readonly CLIENTCONFIGFILE="${HOME}/.ssh/config"
 
 FLAG_COMMANDLINE=true
@@ -83,7 +83,7 @@ function usage {
 }    # ----------  end of function usage  ----------
 
 function create_key_pair_on_client() {
-  echo "Create key pair."
+  echo "Create key pair. This might take a while."
   mkdir -p ${HOME}/.ssh
   chmod 0700 ${HOME}/.ssh
   ssh-keygen -t rsa -f ${HOME}/.ssh/${KEY} -P '' >/dev/null
@@ -91,7 +91,7 @@ function create_key_pair_on_client() {
 
 function copy_pubKey_to_server() {
   echo "Copy public keys to server"
-  scp ${HOME}/.ssh/id_rsa.pub ${USER}@${HOST}:.
+  scp ${HOME}/.ssh/${KEY}.pub ${USER}@${HOST}:.
 }    # ----------  end of function copy_pubKey_to_server  ----------
 
 function add_to_servers_auth_keys() {

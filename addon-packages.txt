@@ -1,8 +1,11 @@
 boost
 clang
 evince
-librsvg
+easytag
+feh
 go
+k3b
+librsvg
 texinfo
 texlive-bibtexextra
 texlive-core
@@ -25,3 +28,4 @@ texlive-plainextra
 texlive-pstricks
 texlive-publishers
 texlive-science
+xournal

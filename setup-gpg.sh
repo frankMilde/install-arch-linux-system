@@ -147,6 +147,7 @@ tee ${AGENT_FILE} << EOF >> /dev/null
 default-cache-ttl 28800
 max-cache-ttl 999999
 ignore-cache-for-signing
+enable-ssh-support
 # Environment file
 write-env-file /home/${username}/.gnupg/gpg-agent.env
 EOF
@@ -486,7 +487,6 @@ function import_key () {
 	echo
 }  # -----  end of function import_key  -----
 
-
 function create_key () {
 	set_up_gpg
 
@@ -503,6 +503,7 @@ function create_key () {
 	echo "$(tput setaf 3) Done creating key.$(tput sgr0)"
 	echo
 }  # -----  end of function create_key  -----
+
 
 function main() {
 	while true
