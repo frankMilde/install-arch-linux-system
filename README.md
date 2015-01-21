@@ -619,3 +619,47 @@ https://wiki.archlinux.org/index.php/Laptop#Power_management
 https://wiki.archlinux.org/index.php/Hdparm#Power_management_configuration
 https://wiki.archlinux.org/index.php/Power_saving
 
+### Printer CUPS Lexmark
+
+Follow the wiki [here](https://wiki.archlinux.org/index.php/Lexmark) and
+[here](https://wiki.archlinux.de/title/Drucker):
+
+Install 
+```
+cups
+libcups
+glibc
+ncurses
+libusb
+libxext
+libxtst
+libxi
+libstdc++5
+heimdal
+```
+
+Download Lexmarks CUPS ppd files and install via provided `install` sh
+script.
+
+Create printer user group and add yourself
+```
+sudo groupadd printadmin 
+sudo gpasswd -a username printadmin       # for printer administration
+sudo gpasswd -a username lp               # for printing priviledges
+```
+Then edit `/etc/cups/cups-files.conf` and add:
+```
+SystemGroup sys root printadmin
+```
+Finally restart `org.cups.cupsd.service`. The user must re-login for these
+changes to take effect. 
+```
+sudo systemctl restart org.cups.cupsd.service
+```
+Then add printer via CUPS web interface by loading in firefox
+```
+http://localhost:631/
+```
+
+restart CUPS 
+
