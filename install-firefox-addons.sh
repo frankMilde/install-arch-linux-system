@@ -50,6 +50,7 @@ function display_addons () {
   echo "         DownloadHelper"
   echo "         Ghostery"
   echo "         Greasemonkey"
+  echo "         Hola"
   echo "         HTTPS Everywhere"
 	echo "         Leech Block"
   echo "         LEO Search"
@@ -78,7 +79,6 @@ function kill_firefox () {
 	killall firefox > /dev/null 2>&1
 }  # -----  end of function kill_firefox  -----
 
-
 function install_addons () {
     local choice
 		local baseURL="addons.mozilla.org/firefox/downloads/latest/"
@@ -100,6 +100,8 @@ function install_addons () {
 			wget "https://${baseURL}9609/addon-9609-latest.xpi" >/dev/null 2>&1
 			echo "         Greasemonkey"
 			wget "https://${baseURL}748/addon-748-latest.xpi" >/dev/null 2>&1
+			echo "         Hola"
+			wget "https://hola.org/firefox_latest.xpi" >/dev/null 2>&1
 			echo "         HTTPS Everywhere"
 			wget "https://www.eff.org/files/https-everywhere-latest.xpi" >/dev/null 2>&1
 			echo "         Leech Block"
@@ -155,6 +157,12 @@ function install_addons () {
 			choice=${choice:-y}
 			if [[ ${choice} == y ]]; then
 				wget "https://${baseURL}748/addon-748-latest.xpi" >/dev/null 2>&1
+			fi
+
+			read -e -p "         Hola (y/n)? (y) " choice
+			choice=${choice:-y}
+			if [[ ${choice} == y ]]; then
+				wget "https://hola.org/firefox_latest.xpi" >/dev/null 2>&1
 			fi
 
 			read -e -p "         HTTPS Everywhere (y/n)? (y) " choice

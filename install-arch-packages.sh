@@ -81,15 +81,15 @@ function usage {
 
 function install_all () {
 sudo pacman -Syu
-# sudo pacman -S $(< all-packages.txt)
+ sudo pacman -S $(< all-packages.txt)
 }  # -----  end of function install_all  -----
 function install_core () {
 sudo pacman -Syu
-#sudo pacman -S $(< core-packages.txt)
+sudo pacman -S $(< core-packages.txt)
 }  # -----  end of function install_core  -----
 function install_addon () {
 sudo pacman -Syu
-#sudo pacman -S $(< addon-packages.txt)
+sudo pacman -S $(< addon-packages.txt)
 }  # -----  end of function install_addon  -----
 
 function install_locals () {
